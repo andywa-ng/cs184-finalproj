@@ -1,0 +1,14 @@
+Sophie Idea:
+
+Rain it in
+
+Summary: We plan to develop a physically-based rain simulation that dynamically adjusts to rain intensity and droplet size. The project will combine particle-based simulation with real-time rendering techniques to visually and physically simulate realistic rain behavior and interaction with surfaces including itself.
+
+Problem: Rain is a complex interaction between water and its surface. We want to simulate rain that adapts to current rain conditions: heavier rain should create bigger splashes or rain falling on objects should either bounce or drip based off of geometry and intensity. Drop physics, adjustable parameters and splash simulation would all be taken account when creating this project. 
+
+1. What We Plan to Deliver
+We plan to deliver a real-time particle-based rain simulation with adjustable parameters such as rain intensity from light drizzle to heavy downpour and droplet size which affects fall speed and splash intensity. We also want to implement puddling/pooling based off the amount of water that has been rained.
+
+
+2. What We Hope to Deliver
+If things go well and we are ahead of schedule, we would like to add wind conditions as a parameter that would affect the rain such as wind direction and wind intensity. This will increase the physics involved by the water falling.
