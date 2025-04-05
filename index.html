@@ -60,33 +60,43 @@
     </style>
 </head>
 <body>
-    <h1>Project Title</h1>
+    <h1>Rain It In</h1>
     
     <div class="section">
         <h2>Summary and Team Members</h2>
-        <p>Project summary goes here. This should be 2-3 sentences that summarize your project.</p>
+        <p>We plan to develop a physically-based rain simulation that dynamically adjusts to rain intensity and droplet size. The
+        project will combine particle-based simulation with real-time rendering techniques to visually and physically simulate
+        realistic rain behavior and interaction with surfaces including itself.</p>
         <h3>Team Members:</h3>
         <ul class="team-members">
-            <li>Team Member 1</li>
-            <li>Team Member 2</li>
-            <li>Team Member 3</li>
+            <li>Sophie Nazarian</li>
+            <li>Andy Wang</li>
+            <li>Dmytro Krukovskyi</li>
             <li>Team Member 4</li>
         </ul>
     </div>
 
     <div class="section">
         <h2>Problem Description</h2>
-        <p>Describe the problem you're trying to solve, its importance, and the challenges involved. Explain your general approach to solving it.</p>
+        <p>Rain is a complex interaction between water and its surface. We want to simulate rain that adapts to current rain
+        conditions: heavier rain should create bigger splashes or rain falling on objects should either bounce or drip based off
+        of geometry and intensity. Drop physics, adjustable parameters and splash simulation would all be taken account when
+        creating this project. We will treat each rain droplet as its own particle and apply the proper forces for it to behave as such. 
+        Figuring out the math for splash and pooling effects might be challenging, but nothing a little physics cant handle.</p>
     </div>
 
     <div class="section">
         <h2>Goals and Deliverables</h2>
         <div class="goals-section">
             <h3>1. What We Plan to Deliver</h3>
-            <p>Describe your baseline plan - what you believe you must accomplish for a successful project.</p>
+            <p>We plan to deliver a real-time particle-based rain simulation with adjustable parameters such as rain intensity from
+            light drizzle to heavy downpour and droplet size which affects fall speed and splash intensity. We also want to
+            implement puddling/pooling based off the amount of water that has been rained. Lastly we want to show the interaction
+            between the droplets and any object it would collide with if present.</p>
             
             <h3>2. What We Hope to Deliver</h3>
-            <p>Describe your aspirational plan - what you hope to achieve if things go well.</p>
+            <p>If things go well and we are ahead of schedule, we would like to add wind conditions as a parameter that would affect
+            the rain such as wind direction and wind intensity. This will increase the rain interaction physics by the water falling.</p>
         </div>
     </div>
 
@@ -99,29 +109,35 @@
             </tr>
             <tr>
                 <td>Week 1</td>
-                <td>Task descriptions for week 1</td>
+                <td>Particle System (get the rain to actually work) (rain physics) (make it look realistic) (ray tracing for light if we want true realism)</td>
             </tr>
             <tr>
                 <td>Week 2</td>
-                <td>Task descriptions for week 2</td>
+                <td>UI (adjustable rain intensity, droplet size)</td>
             </tr>
             <tr>
                 <td>Week 3</td>
-                <td>Task descriptions for week 3</td>
+                <td>collision system (object interaction, if boundary is present: pooling/puddling, rain freefall no boundary) (do we want to treat the mouse as an object?)</td>
             </tr>
             <tr>
                 <td>Week 4</td>
-                <td>Task descriptions for week 4</td>
+                <td> adding wind potentially (intensity direction, wind/rain interaction)</td>
             </tr>
         </table>
+    </div>
+
+    
+    <div class="webpage">
+        <h2>Webpage</h2>
+        I dont have the setting tab showing up on github for me so I havent been able to use  github pages to make the webpage yet, so hopefully the index html will work for now
     </div>
 
     <div class="section">
         <h2>Resources</h2>
         <ul class="resources-list">
-            <li><strong>References:</strong> List books, papers, and online resources</li>
-            <li><strong>Computing Platform:</strong> Describe your hardware and software resources</li>
-            <li><strong>Existing Code:</strong> If applicable, describe and provide links to existing code</li>
+            <li><strong>References:</strong> tbd after feedback</li>
+            <li><strong>Computing Platform:</strong> tbd after feedback</li>
+            <li><strong>Existing Code:</strong> tbd after feedback</li>
         </ul>
     </div>
 </body>
