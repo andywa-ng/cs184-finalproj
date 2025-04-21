@@ -1,7 +1,7 @@
 import numpy as np
 
 class Platform:
-    def __init__(self, center=(0.5, 0.25), width=0.4, angle=-np.pi / 12):  # <- changed angle
+    def __init__(self, center=(0.5, 0.25), width=0.4, angle=-np.pi / 6):
         self.center = np.array(center, dtype=float)
         self.width = width
         self.angle = angle

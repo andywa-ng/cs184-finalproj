@@ -14,9 +14,8 @@ def spawn_splash(center, velocity_magnitude, parent_radius):
     log_stddev = 0.4
 
     for _ in range(count):
-        # ✅ Gaussian around vertical (π/2), not right (0)
         angle = np.random.normal(loc=np.pi / 2, scale=np.pi / 6)
-        angle = np.clip(angle, 0, np.pi)  # only upper hemisphere
+        angle = np.clip(angle, 0, np.pi)
 
         speed = np.random.normal(velocity_magnitude * 0.7, 0.7)
         vel = speed * np.array([np.cos(angle), np.sin(angle)])
@@ -33,18 +32,14 @@ def slide_particle(p, platform, friction=0.05):
     slope_vec = platform.end - platform.start
     slope_dir = slope_vec / np.linalg.norm(slope_vec)
 
-    # Project gravity onto slope
     g_proj = np.dot(np.array([0, -9.8]), slope_dir)
     accel = g_proj * slope_dir
 
-    # Apply acceleration
     p.vel += accel * SIM_DT
 
-    # Apply friction: reduce tangential speed
     tangent_vel = np.dot(p.vel, slope_dir)
     p.vel = tangent_vel * (1 - friction) * slope_dir
 
-    # Update position
     p.pos += p.vel * SIM_DT
     p.pos[1] = platform.height_at(p.pos[0]) + p.radius
     p.sliding = True
@@ -138,7 +133,6 @@ def run_simulation():
 
             updated_particles.append(p)
 
-        # === Merge only resting splash particles on ground ===
         merged = set()
         new_merged_particles = []
 
@@ -163,7 +157,6 @@ def run_simulation():
         particles.clear()
         particles.extend(final_particles)
 
-        # === Draw ===
         for patch in list(ax.patches):
             patch.remove()
 
