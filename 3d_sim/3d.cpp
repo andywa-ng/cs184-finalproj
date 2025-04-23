@@ -7,9 +7,8 @@
 #include <iostream>
 #include "Droplet.h"
 #include "ShaderUtils.h"
-#include <fstream>
-#include <sstream>
-#include <string>
+#include "Particle.h"
+#include <vector>
 #include <iostream>
 
 // Window dimensions
@@ -22,6 +21,7 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float yaw = -90.0f, pitch = 0.0f, zoom = 45.0f;
 float lastX = WIDTH / 2.0f, lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
+std::vector<Particle> particles;
 
 // Mouse callback
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -320,9 +320,24 @@ int main() {
         
         // Update droplet physics
         if (!isPaused) {
-            droplet.update(deltaTime);
+            droplet.update(deltaTime, particles);
         }
         
+        // Update particles for droplet
+        for (auto it = particles.begin(); it != particles.end();) {
+            it->position += it->velocity * deltaTime;
+            it->velocity.y -= 9.8f * deltaTime;
+            it->life -= deltaTime; // Decrease lifetime
+        
+            // Remove dead particles
+            if (it->life <= 0.0f) {
+                it = particles.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+       
         // Clear the screen
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -339,21 +354,33 @@ int main() {
         glm::vec3 lightBrown = glm::vec3(0.87f, 0.72f, 0.53f);
         glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(lightBrown));
 
-       
         // Draw the ground
         glBindVertexArray(groundVAO);
         glm::mat4 groundModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(groundModel));
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
-        // Draw the water droplet
-        glBindVertexArray(VAO);
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, droplet.position);
-        model = glm::scale(model, glm::vec3(droplet.size));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+        // Render water droplet if it hasn't collided yet
+        if (!droplet.hasCollided) {
+            glBindVertexArray(VAO);
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, droplet.position);
+            model = glm::scale(model, glm::vec3(droplet.size));
+            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+        }
+
+         // Render droplet particles
+        for (const auto& particle : particles) {
+            glBindVertexArray(VAO); // Use the same VAO as the droplet
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, particle.position);
+            model = glm::scale(model, glm::vec3(particle.size));
+            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+        }
         
+       
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
