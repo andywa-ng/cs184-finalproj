@@ -8,6 +8,7 @@
 #include "Droplet.h"
 #include "ShaderUtils.h"
 #include "Particle.h"
+#include "Puddle.h"
 #include <vector>
 #include <iostream>
 
@@ -258,6 +259,7 @@ int main() {
     glBindVertexArray(0);
 
     std::vector<Droplet> droplets;
+    std::vector<Puddle> puddles;
     float spawnTimer = 0.0f;
 
     // Store initial state of droplet
@@ -322,8 +324,10 @@ int main() {
 
         // spawn new droplet every 1 second
         spawnTimer += deltaTime;
-        if (spawnTimer >= 0.01f) {
-            glm::vec3 spawnPosition = glm::vec3(static_cast<float>(rand()) / RAND_MAX * 4.0f - 2.0f, 5.0f, 0.0f); // Random x position
+        if (spawnTimer >= 0.005f) {
+            float randomX = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
+            float randomZ = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
+            glm::vec3 spawnPosition = glm::vec3(randomX, 5.0f, randomZ);
             glm::vec3 spawnVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
             float spawnSize = 0.1f;
             droplets.emplace_back(spawnPosition, spawnVelocity, spawnSize);
@@ -357,11 +361,8 @@ int main() {
             }
         }
 
-
-        
-
         // Clear the screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Use shader program
@@ -390,6 +391,9 @@ int main() {
 
         glm::vec3 lightBrown = glm::vec3(0.87f, 0.72f, 0.53f);
         glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(lightBrown));
+        
+        glm::vec3 blue = glm::vec3(0.0f, 0.0f, 1.0f); // Blue color for the droplets
+        glUniform3fv(glGetUniformLocation(shaderProgram, "dropletColor"), 1, glm::value_ptr(blue));
 
         // Draw the ground
         glBindVertexArray(groundVAO);
@@ -418,7 +422,6 @@ int main() {
             glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
             glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
         }
-        
        
         // Swap buffers and poll events
         glfwSwapBuffers(window);
