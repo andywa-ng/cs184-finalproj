@@ -14,30 +14,26 @@ void Droplet::update(float deltaTime, std::vector<Particle>& particles) {
     if (position.y - size < -2.0f) {
         position.y = -2.0f + size;
 
-        // stop bouncing when energy is low
-        if (std::abs(velocity.y) < 0.5f){
-            velocity.y = 0.0f;
+        // generate splash particles
+        if (!hasCollided){
+            hasCollided = true;
 
-            // generate splash particles
-            if (!hasCollided){
-                hasCollided = true;
+            std::default_random_engine generator;
+            std::normal_distribution<float> angleDistribution(0.0f, 1.0f); // Mean 0, StdDev 1
+            std::lognormal_distribution<float> speedDistribution(0.5f, 0.25f); // Mean 0.5, StdDev 0.25
 
-                std::default_random_engine generator;
-                std::normal_distribution<float> angleDistribution(0.0f, 1.0f); // Mean 0, StdDev 1
-                std::lognormal_distribution<float> speedDistribution(0.5f, 0.25f); // Mean 0.5, StdDev 0.25
+            for (int i = 0; i < 50; i ++) {
 
-                for (int i = 0; i < 50; i ++) {
+                float angle = angleDistribution(generator) * 3.14159265359f; // scale
+                float speed = speedDistribution(generator); // log-normal speed
 
-                    float angle = angleDistribution(generator) * 3.14159265359f; // scale
-                    float speed = speedDistribution(generator); // log-normal speed
+                glm::vec3 velocity = glm::vec3(cos(angle) * speed, 1.0f, sin(angle) * speed);
 
-                    glm::vec3 velocity = glm::vec3(cos(angle) * speed, 1.0f, sin(angle) * speed);
-
-                    particles.emplace_back(position, velocity, 0.1f, 2.0f); // position, velocity, size, lifespan
-                }
+                particles.emplace_back(position, velocity, 0.05f, 2.0f); // position, velocity, size, lifespan
             }
-            
         }
+        
+        
         velocity = glm::vec3(0.0f); // set velocity to zero after collision
     } else {
         hasCollided = false; // Reset collision state
