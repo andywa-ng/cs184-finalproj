@@ -12,8 +12,6 @@ void Droplet::update(float deltaTime, std::vector<Particle>& particles) {
     // Ground collision
     if (position.y - size < -2.0f) {
         position.y = -2.0f + size;
-        velocity.y = -velocity.y * 0.3f; // dampen bounce
-
 
         // stop bouncing when energy is low
         if (std::abs(velocity.y) < 0.5f){
@@ -30,8 +28,8 @@ void Droplet::update(float deltaTime, std::vector<Particle>& particles) {
                 }
             }
             
-            std::cout << "Generated " << particles.size() << " particles" << std::endl;
         }
+        velocity = glm::vec3(0.0f);
     } else {
         hasCollided = false; // Reset collision state
     }

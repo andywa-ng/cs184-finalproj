@@ -300,6 +300,7 @@ int main() {
             droplet.position = initialPosition;
             droplet.velocity = initialVelocity;
             droplet.size = initialSize;
+            droplet.hasCollided = false;
         }
 
         // Use shader program
