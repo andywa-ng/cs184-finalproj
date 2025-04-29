@@ -7,11 +7,11 @@ in vec3 Normal;
 uniform vec3 lightPos;
 uniform vec3 viewPos;
 uniform vec3 groundColor;
+uniform vec3 dropletColor;
 
 void main()
 {
     // Water properties
-    vec3 waterColor = vec3(0.2, 0.4, 0.8);
     float ambientStrength = 0.2;
     float specularStrength = 0.8;
     float shininess = 64.0;
@@ -39,7 +39,9 @@ void main()
     if (FragPos.y < -1.9) { // Check if rendering the ground plane
         result = groundColor; // Use the ground color
     } else {
-        result = (ambient + diffuse) * waterColor + specular + fresnel * 0.5;
+        result = dropletColor;
     }
-    FragColor = vec4(result, 1.0); // Opaque ground
+
+    vec3 lighting = ambient + diffuse + specular;
+    FragColor = vec4(result * lighting, 1.0); // Opaque rendering
 }

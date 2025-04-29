@@ -7,9 +7,9 @@
 #include <iostream>
 #include "Droplet.h"
 #include "ShaderUtils.h"
-#include <fstream>
-#include <sstream>
-#include <string>
+#include "Particle.h"
+#include "Puddle.h"
+#include <vector>
 #include <iostream>
 
 // Window dimensions
@@ -22,6 +22,7 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float yaw = -90.0f, pitch = 0.0f, zoom = 45.0f;
 float lastX = WIDTH / 2.0f, lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
+std::vector<Particle> particles;
 
 // Mouse callback
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -72,12 +73,19 @@ void createDroplet(std::vector<GLfloat>& vertices, std::vector<GLuint>& indices,
     float stackStep = PI / stacks;
     float sectorAngle, stackAngle;
 
+    std::vector<float> Cn = {0.0f, -0.1f, 0.02f, -0.005f, 0.001f}; // Cn coefficients
+
     // Generate vertices
     for (int i = 0; i <= stacks; ++i) {
-        stackAngle = PI / 2 - i * stackStep;
+        stackAngle = PI / 2 - i * stackStep; // polar angle thata
+       
+        float r = radius;
+        for (size_t n = 0; n < Cn.size(); ++n) {
+            r += Cn[n] * cosf(n * stackAngle);
+        }
+
         float xy = radius * cosf(stackAngle);
         float z = radius * sinf(stackAngle);
-        
 
         // Apply scaling and tapering for teardrop shape
         float scale = 1.0f + (z / radius); // Stretch the bottom and taper the top
@@ -257,13 +265,17 @@ int main() {
     
     glBindVertexArray(0);
 
+    std::vector<Droplet> droplets;
+    std::vector<Puddle> puddles;
+    float spawnTimer = 0.0f;
+
     // Store initial state of droplet
-    glm::vec3 initialPosition = glm::vec3(0.0f, 2.0f, 0.0f);
-    glm::vec3 initialVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
-    float initialSize = 0.25f; // change for visibility
+    // glm::vec3 initialPosition = glm::vec3(0.0f, 2.0f, 0.0f);
+    // glm::vec3 initialVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
+    // float initialSize = 0.25f; // change for visibility
 
     // Create a droplet
-    Droplet droplet(initialPosition, initialVelocity, initialSize);
+    // Droplet droplet(initialPosition, initialVelocity, initialSize);
     
     // Light position
     glm::vec3 lightPos = glm::vec3(2.0f, 3.0f, 2.0f);
@@ -273,6 +285,11 @@ int main() {
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
+        // Calculate delta time
+        float currentFrame = glfwGetTime();
+        float deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         // Process input
         float cameraSpeed = 2.5f * 0.016f; // Adjust speed based on delta time
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
@@ -290,6 +307,10 @@ int main() {
             if (!pKeyPressed) {
                 isPaused = !isPaused; // Toggle pause state
                 pKeyPressed = true;
+
+                if (isPaused) {
+                    spawnTimer = 0.0f; // Reset spawn timer
+                }
             }
         } else {
             pKeyPressed = false;
@@ -297,35 +318,74 @@ int main() {
 
         // Replay functionality
         if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-            droplet.position = initialPosition;
-            droplet.velocity = initialVelocity;
-            droplet.size = initialSize;
+            for (auto& droplet : droplets) {
+                droplet.position = glm::vec3(static_cast<float>(rand()) / RAND_MAX * 4.0f - 2.0f, 5.0f, 0.0f); // Reset to random x position
+                droplet.velocity = glm::vec3(0.0f, 0.0f, 0.0f); // Reset velocity
+                droplet.size = 0.25f; // Reset size
+                droplet.hasCollided = false; // Reset collision state
+            }
+            particles.clear(); // Clear all particles
+            droplets.clear(); // Clear all droplets
+            spawnTimer = 0.0f; // Reset spawn timer
         }
+
+        // spawn new droplet every 1 second
+        spawnTimer += deltaTime;
+        if (spawnTimer >= 0.005f) {
+            float randomX = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
+            float randomZ = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
+            glm::vec3 spawnPosition = glm::vec3(randomX, 5.0f, randomZ);
+            glm::vec3 spawnVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
+            float spawnSize = 0.1f;
+            droplets.emplace_back(spawnPosition, spawnVelocity, spawnSize);
+            spawnTimer = 0.0f;
+        }
+
+        // Update droplet physics
+        if (!isPaused) {
+            for (auto& droplet : droplets) {
+                droplet.update(deltaTime, particles);
+            }
+
+            droplets.erase(std::remove_if(droplets.begin(), droplets.end(),
+            [](const Droplet& droplet) {
+                return droplet.velocity == glm::vec3(0.0f);
+            }),
+            droplets.end());
+
+            // Update particles for droplet
+            for (auto it = particles.begin(); it != particles.end();) {
+                it->position += it->velocity * deltaTime;
+                it->velocity.y -= 9.8f * deltaTime;
+                it->life -= deltaTime; // Decrease lifetime
+            
+                // Remove dead particles
+                if (it->life <= 0.0f) {
+                    it = particles.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
+
+        // Clear the screen
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Use shader program
         glUseProgram(shaderProgram);
         
-        // Update view and projection matrices
+        // set uniforms
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
+        // Update view and projection matrices
+        // glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        // glm::mat4 projection = glm::perspective(glm::radians(zoom), (float)WIDTH / (float)HEIGHT, 0.1f, 100.0f);
         
-        // Calculate delta time
-        float currentFrame = glfwGetTime();
-        float deltaTime = currentFrame - lastFrame;
-        lastFrame = currentFrame;
         
-       
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
         
-        // Update droplet physics
-        if (!isPaused) {
-            droplet.update(deltaTime);
-        }
-        
-        // Clear the screen
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         // Activate shader
         glUseProgram(shaderProgram);
@@ -338,22 +398,38 @@ int main() {
 
         glm::vec3 lightBrown = glm::vec3(0.87f, 0.72f, 0.53f);
         glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(lightBrown));
+        
+        glm::vec3 blue = glm::vec3(0.0f, 0.0f, 1.0f); // Blue color for the droplets
+        glUniform3fv(glGetUniformLocation(shaderProgram, "dropletColor"), 1, glm::value_ptr(blue));
 
-       
         // Draw the ground
         glBindVertexArray(groundVAO);
         glm::mat4 groundModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(groundModel));
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
-        // Draw the water droplet
-        glBindVertexArray(VAO);
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, droplet.position);
-        model = glm::scale(model, glm::vec3(droplet.size));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
-        
+        // Render water droplet if it hasn't collided yet
+        for (const auto& droplet : droplets) {
+            if (!droplet.hasCollided) {
+                glBindVertexArray(VAO);
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, droplet.position);
+                model = glm::scale(model, glm::vec3(droplet.size));
+                glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+            }
+        }
+
+         // Render droplet particles
+        for (const auto& particle : particles) {
+            glBindVertexArray(VAO); // Use the same VAO as the droplet
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, particle.position);
+            model = glm::scale(model, glm::vec3(particle.size));
+            glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
+        }
+       
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
