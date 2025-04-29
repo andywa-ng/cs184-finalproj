@@ -73,12 +73,19 @@ void createDroplet(std::vector<GLfloat>& vertices, std::vector<GLuint>& indices,
     float stackStep = PI / stacks;
     float sectorAngle, stackAngle;
 
+    std::vector<float> Cn = {0.0f, -0.1f, 0.02f, -0.005f, 0.001f}; // Cn coefficients
+
     // Generate vertices
     for (int i = 0; i <= stacks; ++i) {
-        stackAngle = PI / 2 - i * stackStep;
+        stackAngle = PI / 2 - i * stackStep; // polar angle thata
+       
+        float r = radius;
+        for (size_t n = 0; n < Cn.size(); ++n) {
+            r += Cn[n] * cosf(n * stackAngle);
+        }
+
         float xy = radius * cosf(stackAngle);
         float z = radius * sinf(stackAngle);
-        
 
         // Apply scaling and tapering for teardrop shape
         float scale = 1.0f + (z / radius); // Stretch the bottom and taper the top
