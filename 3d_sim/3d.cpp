@@ -1,7 +1,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <OpenGL/gl.h>
+#include <GL/gl.h> 
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -10,6 +11,12 @@
 #include "Particle.h"
 #include <vector>
 #include <iostream>
+#include <algorithm>     // for std::remove_if
+
+// Define STB_IMAGE_IMPLEMENTATION in exactly one .c or .cpp file
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h" 
+
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -138,6 +145,39 @@ std::string fragmentCode = loadShaderSource("fragment_shader.glsl");
 const char* vertexShaderSource = vertexCode.c_str();
 const char* fragmentShaderSource = fragmentCode.c_str();
 
+// Function to load a cubemap texture
+unsigned int loadCubemap(std::vector<std::string> faces)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); i++)
+    {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cerr << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data); // Even if null, call free
+        }
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
+}
+
 int main() {
     bool isPaused = false;
 
@@ -194,6 +234,10 @@ int main() {
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
         return -1;
     }
+    
+    // Tell main shader to use texture unit 0 for the skybox sampler
+    glUseProgram(shaderProgram);
+    glUniform1i(glGetUniformLocation(shaderProgram, "skybox"), 0);
     
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
@@ -265,7 +309,7 @@ int main() {
     glBindVertexArray(0);
 
     std::vector<Droplet> droplets;
-    std::vector<Puddle> puddles;
+    //std::vector<Puddle> puddles;
     float spawnTimer = 0.0f;
 
     // Store initial state of droplet
@@ -281,6 +325,98 @@ int main() {
     
     // Time tracking for animation
     float lastFrame = 0.0f;
+
+    // Before the main loop, load the cubemap
+    std::vector<std::string> faces = {
+        "textures/skybox/right.jpg",
+        "textures/skybox/left.jpg",
+        "textures/skybox/top.jpg",
+        "textures/skybox/bottom.jpg",
+        "textures/skybox/front.jpg",
+        "textures/skybox/back.jpg"
+    };
+    unsigned int cubemapTexture = loadCubemap(faces);
+
+    // --- Skybox Setup --- 
+    float skyboxVertices[] = {
+        // positions          
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+
+    GLuint skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glBindVertexArray(0);
+
+    // Load skybox shaders
+    std::string skyboxVertexCode = loadShaderSource("skybox_vertex.glsl");
+    std::string skyboxFragmentCode = loadShaderSource("skybox_fragment.glsl");
+    const char* skyboxVertexShaderSource = skyboxVertexCode.c_str();
+    const char* skyboxFragmentShaderSource = skyboxFragmentCode.c_str();
+
+    GLuint skyboxVertexShader = compileShader(GL_VERTEX_SHADER, skyboxVertexShaderSource);
+    GLuint skyboxFragmentShader = compileShader(GL_FRAGMENT_SHADER, skyboxFragmentShaderSource);
+
+    GLuint skyboxShaderProgram = glCreateProgram();
+    glAttachShader(skyboxShaderProgram, skyboxVertexShader);
+    glAttachShader(skyboxShaderProgram, skyboxFragmentShader);
+    glLinkProgram(skyboxShaderProgram);
+
+    // Check for skybox shader linking errors (similar to the main shader program check)
+    glGetProgramiv(skyboxShaderProgram, GL_LINK_STATUS, &success); 
+    if (!success) {
+        glGetProgramInfoLog(skyboxShaderProgram, 512, NULL, infoLog);
+        std::cerr << "ERROR::SKYBOX::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
+        // Consider cleanup and return
+    }
+    glDeleteShader(skyboxVertexShader);
+    glDeleteShader(skyboxFragmentShader);
+    // --- End Skybox Setup ---
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -328,16 +464,22 @@ int main() {
             spawnTimer = 0.0f; // Reset spawn timer
         }
 
-        // spawn new droplet every 1 second
+        // spawn new droplet
         spawnTimer += deltaTime;
-        if (spawnTimer >= 0.005f) {
+        if (spawnTimer >= 0.0005f) {
             float randomX = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
             float randomZ = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
             glm::vec3 spawnPosition = glm::vec3(randomX, 5.0f, randomZ);
             glm::vec3 spawnVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
-            float spawnSize = 0.1f;
+
+            // Randomize droplet size
+            float minSize = 0.08f;
+            float maxSize = 0.15f;
+            float spawnSize = minSize + static_cast<float>(rand()) / RAND_MAX * (maxSize - minSize);
+            // float spawnSize = 0.1f; // Old constant size
+
             droplets.emplace_back(spawnPosition, spawnVelocity, spawnSize);
-            spawnTimer = 0.0f;
+            spawnTimer = 0.0f; // Reset spawn timer
         }
 
         // Update droplet physics
@@ -395,11 +537,19 @@ int main() {
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+        glm::vec3 lightColor = glm::vec3(1.0f, 1.0f, 1.0f); // Add light color (white)
+        glUniform3fv(glGetUniformLocation(shaderProgram, "lightColor"), 1, glm::value_ptr(lightColor));
+
         glm::vec3 lightBrown = glm::vec3(0.87f, 0.72f, 0.53f);
         glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(lightBrown));
         
         glm::vec3 blue = glm::vec3(0.0f, 0.0f, 1.0f); // Blue color for the droplets
         glUniform3fv(glGetUniformLocation(shaderProgram, "dropletColor"), 1, glm::value_ptr(blue));
+
+        // Activate and bind the cubemap texture for the main shader (droplets/particles)
+        glActiveTexture(GL_TEXTURE0); 
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+        // The uniform skybox=0 was already set after linking the shader.
 
         // Draw the ground
         glBindVertexArray(groundVAO);
@@ -429,6 +579,25 @@ int main() {
             glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
         }
        
+        // --- Draw Skybox --- 
+        glDepthFunc(GL_LEQUAL); 
+        glUseProgram(skyboxShaderProgram);
+        // Remove translation from the view matrix for the skybox
+        // We calculate view matrix again here
+        glm::mat4 skyboxView = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp))); 
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(skyboxView));
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        // Skybox cube
+        glBindVertexArray(skyboxVAO);
+        // Cubemap is already bound to GL_TEXTURE0 from above
+        // glActiveTexture(GL_TEXTURE0); // No need to activate again if already active
+        // glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture); // No need to bind again if already bound
+        glUniform1i(glGetUniformLocation(skyboxShaderProgram, "skybox"), 0); // Ensure sampler is set (redundant but safe)
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); 
+        // --- End Draw Skybox ---
+
         // Swap buffers and poll events
         glfwSwapBuffers(window);
         glfwPollEvents();
