@@ -3,6 +3,8 @@ CXX = g++
 CXXFLAGS = -std=c++11 -I/opt/homebrew/include
 LDFLAGS = -L/opt/homebrew/lib -lglfw -lGLEW -framework OpenGL
 
+
+
 # Target executable
 TARGET = 3d_simulation
 

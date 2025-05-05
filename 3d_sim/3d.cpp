@@ -8,7 +8,6 @@
 #include "Droplet.h"
 #include "ShaderUtils.h"
 #include "Particle.h"
-#include "Puddle.h"
 #include <vector>
 #include <iostream>
 
@@ -19,6 +18,7 @@ const GLuint WIDTH = 800, HEIGHT = 600;
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+glm::vec3 lightPos2 = glm::vec3(-3.0f, 4.0f, -2.0f);
 float yaw = -90.0f, pitch = 0.0f, zoom = 45.0f;
 float lastX = WIDTH / 2.0f, lastY = HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -67,47 +67,71 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
 }
 
 // Create a sphere mesh
+// Create a better teardrop/raindrop mesh
 void createDroplet(std::vector<GLfloat>& vertices, std::vector<GLuint>& indices, float radius, int sectors, int stacks) {
     float PI = 3.14159265359f;
     float sectorStep = 2 * PI / sectors;
     float stackStep = PI / stacks;
     float sectorAngle, stackAngle;
 
-    std::vector<float> Cn = {0.0f, -0.1f, 0.02f, -0.005f, 0.001f}; // Cn coefficients
+    // Clear existing data
+    vertices.clear();
+    indices.clear();
 
     // Generate vertices
     for (int i = 0; i <= stacks; ++i) {
-        stackAngle = PI / 2 - i * stackStep; // polar angle thata
-       
-        float r = radius;
-        for (size_t n = 0; n < Cn.size(); ++n) {
-            r += Cn[n] * cosf(n * stackAngle);
+        stackAngle = PI / 2 - i * stackStep; // Starting from top (PI/2) to bottom (-PI/2)
+        
+        // Apply teardrop shape function:
+        // - Top half is approximately spherical
+        // - Bottom half tapers to a point
+        float xy, z;
+        
+        // Parameter t goes from 0 (top) to 1 (bottom)
+        float t = static_cast<float>(i) / stacks;
+        
+        if (t < 0.5) { // Top half - roughly spherical
+            xy = radius * cos(stackAngle);
+            z = radius * sin(stackAngle);
+        } else { // Bottom half - tapered
+            // Smooth transition from sphere to point
+            float taperFactor = 1.0f - pow((t - 0.5f) * 2.0f, 0.7f);
+            xy = radius * cos(stackAngle) * taperFactor;
+            z = radius * sin(stackAngle);
+            
+            // Stretch downward slightly
+            z *= (1.0f + (t - 0.5f) * 0.5f);
         }
-
-        float xy = radius * cosf(stackAngle);
-        float z = radius * sinf(stackAngle);
-
-        // Apply scaling and tapering for teardrop shape
-        float scale = 1.0f + (z / radius); // Stretch the bottom and taper the top
-        z *= 0.3f; // Elongate the droplet vertically
 
         for (int j = 0; j <= sectors; ++j) {
             sectorAngle = j * sectorStep;
 
-            // Vertex position
-            float x = xy * cosf(sectorAngle);
-            float y = xy * sinf(sectorAngle);
+            // Position
+            float x = xy * cos(sectorAngle);
+            float y = xy * sin(sectorAngle);
             vertices.push_back(x);
             vertices.push_back(y);
             vertices.push_back(z);
 
-            // Normal vector
-            float nx = x / radius;
-            float ny = y / radius;
-            float nz = z / radius;
-            vertices.push_back(nx);
-            vertices.push_back(ny);
-            vertices.push_back(nz);
+            // Normal vector - calculate analytically for better lighting
+            // For a teardrop shape, normals need special consideration
+            glm::vec3 normal;
+            if (t < 0.5) { // Upper half - spherical normals
+                normal = glm::normalize(glm::vec3(x, y, z));
+            } else { // Lower half - interpolate between sphere and cone normals
+                // Blend between sphere normal and cone normal
+                glm::vec3 sphereNormal = glm::normalize(glm::vec3(x, y, z));
+                
+                // Cone normal is more complex - tangent to the taper
+                float coneBlend = (t - 0.5f) * 2.0f; // 0 at midpoint, 1 at bottom
+                glm::vec3 coneNormal = glm::normalize(glm::vec3(x, y, 0.0f));
+                
+                normal = glm::normalize(glm::mix(sphereNormal, coneNormal, coneBlend * 0.7f));
+            }
+            
+            vertices.push_back(normal.x);
+            vertices.push_back(normal.y);
+            vertices.push_back(normal.z);
         }
     }
 
@@ -175,6 +199,10 @@ int main() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     
     // Create and compile shaders
     GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
@@ -231,10 +259,10 @@ int main() {
     // Create a ground plane VAO
     GLfloat groundVertices[] = {
         // Positions          // Normals
-        -5.0f, -2.0f, -5.0f,  0.0f, 1.0f, 0.0f,
-         5.0f, -2.0f, -5.0f,  0.0f, 1.0f, 0.0f,
-         5.0f, -2.0f,  5.0f,  0.0f, 1.0f, 0.0f,
-        -5.0f, -2.0f,  5.0f,  0.0f, 1.0f, 0.0f
+        -10.0f, -2.0f, -10.0f,  0.0f, 1.0f, 0.0f,
+         10.0f, -2.0f, -10.0f,  0.0f, 1.0f, 0.0f,
+         10.0f, -2.0f,  10.0f,  0.0f, 1.0f, 0.0f,
+        -10.0f, -2.0f,  10.0f,  0.0f, 1.0f, 0.0f
     };
     
     GLuint groundIndices[] = {
@@ -264,9 +292,24 @@ int main() {
     glEnableVertexAttribArray(1);
     
     glBindVertexArray(0);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundEBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(groundIndices), groundIndices, GL_STATIC_DRAW);
+    
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(0);
+    
+    // Normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+    
+    glBindVertexArray(0);
 
     std::vector<Droplet> droplets;
-    std::vector<Puddle> puddles;
     float spawnTimer = 0.0f;
 
     // Store initial state of droplet
@@ -336,7 +379,7 @@ int main() {
             float randomZ = static_cast<float>(rand()) / RAND_MAX * 10.0f - 5.0f; // Range: [-5.0f, 5.0f]
             glm::vec3 spawnPosition = glm::vec3(randomX, 5.0f, randomZ);
             glm::vec3 spawnVelocity = glm::vec3(0.0f, 0.0f, 0.0f);
-            float spawnSize = 0.1f;
+            float spawnSize = 0.3f;
             droplets.emplace_back(spawnPosition, spawnVelocity, spawnSize);
             spawnTimer = 0.0f;
         }
@@ -391,22 +434,35 @@ int main() {
         glUseProgram(shaderProgram);
         
         //Set uniforms
+        glUniform3fv(glGetUniformLocation(shaderProgram, "lightPos2"), 1, glm::value_ptr(lightPos2));
         glUniform3fv(glGetUniformLocation(shaderProgram, "lightPos"), 1, glm::value_ptr(lightPos));
         glUniform3fv(glGetUniformLocation(shaderProgram, "viewPos"), 1, glm::value_ptr(cameraPos));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
-        glm::vec3 lightBrown = glm::vec3(0.87f, 0.72f, 0.53f);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(lightBrown));
         
-        glm::vec3 blue = glm::vec3(0.0f, 0.0f, 1.0f); // Blue color for the droplets
-        glUniform3fv(glGetUniformLocation(shaderProgram, "dropletColor"), 1, glm::value_ptr(blue));
+        glm::vec3 waterColor = glm::vec3(0.2f, 0.5f, 0.8f); // More natural blue color for water
+        glUniform3fv(glGetUniformLocation(shaderProgram, "dropletColor"), 1, glm::value_ptr(waterColor));; // Blue color for the droplets
 
         // Draw the ground
+        glm::vec3 groundColor = glm::vec3(0.7f, 0.65f, 0.5f); // Sandy brown
+        glUniform3fv(glGetUniformLocation(shaderProgram, "groundColor"), 1, glm::value_ptr(groundColor));
+
+        // Make sure depth testing is enabled before drawing the ground
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+
+        // Draw ground first (it's opaque)
         glBindVertexArray(groundVAO);
         glm::mat4 groundModel = glm::mat4(1.0f);
         glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(groundModel));
+
+        // Make the ground plane completely opaque
+        glDisable(GL_BLEND);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glEnable(GL_BLEND);
+
+        // Now set up for transparent objects
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         
         // Render water droplet if it hasn't collided yet
         for (const auto& droplet : droplets) {
@@ -414,8 +470,15 @@ int main() {
                 glBindVertexArray(VAO);
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, droplet.position);
+                
+                // Add slight rotation to make droplets look more dynamic
+                float rotationAngle = glfwGetTime() * 0.5f; // Slow rotation
+                model = glm::rotate(model, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+                
                 model = glm::scale(model, glm::vec3(droplet.size));
                 glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+                
+                // Draw droplet with transparency
                 glDrawElements(GL_TRIANGLES, sphereIndices.size(), GL_UNSIGNED_INT, 0);
             }
         }
