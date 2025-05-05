@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,12 +15,14 @@
             color: #333;
             background-color: #f5f9fc;
         }
+
         .container {
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             padding: 40px;
         }
+
         h1 {
             color: #2c3e50;
             text-align: center;
@@ -27,18 +30,26 @@
             border-bottom: 2px solid #3498db;
             padding-bottom: 15px;
         }
+
+        h2 {
+            color: #2c3e50;
+            margin-top: 40px;
+        }
+
         .description {
             text-align: center;
             margin-bottom: 40px;
             font-size: 18px;
             color: #555;
         }
+
         .nav-links {
             display: flex;
             justify-content: center;
             gap: 30px;
             margin-top: 40px;
         }
+
         .nav-button {
             display: inline-block;
             padding: 15px 30px;
@@ -51,22 +62,26 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
         }
+
         .nav-button:hover {
             background-color: #2980b9;
             transform: translateY(-2px);
             box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
         }
+
         .project-info {
             margin-top: 50px;
             padding-top: 30px;
             border-top: 1px solid #e0e0e0;
         }
+
         .team-members {
             margin-top: 30px;
             text-align: center;
             font-style: italic;
             color: #666;
         }
+
         .github-link {
             display: block;
             text-align: center;
@@ -75,11 +90,13 @@
             text-decoration: none;
             font-weight: bold;
         }
+
         .github-link:hover {
             text-decoration: underline;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Rain It In</h1>
@@ -88,25 +105,153 @@
         <div class="nav-links">
             <a href="proposal.html" class="nav-button">Project Proposal</a>
             <a href="milestone.html" class="nav-button">Milestone Report</a>
+            <a href="https://docs.google.com/presentation/d/1fZXuT_6Nm34phvQez8Zd5ZV7brQTVtZz2Q0dy28RW3E/edit?pli=1#slide=id.g4dfce81f19_0_45"
+                class="nav-button" target="_blank">Presentation Slides</a>
+            <!-- presentation video -->
+        </div>
+
+        <div style="margin-top: 50px; text-align: center;">
+            <video width="800" controls>
+                <source src="sim.mov" type="video/quicktime">
+            </video>
+            <p style="color: #555; margin-top: 10px;">Simulation Demo (sim.mov)</p>
+        </div>
+
+        <div style="margin-top: 50px; text-align: center;">
+            <video width="800" controls>
+                <source src="presvideo.mp4" type="video/quicktime">
+            </video>
+            <p style="color: #555; margin-top: 10px;">Presentation Video</p>
         </div>
 
         <div class="project-info">
-            <h2>About the Project</h2>
+            <h2>Abstract</h2>
             <p>
-                Rain It In is a water droplet physics simulation that models the complex behavior of raindrops
-                as they fall, splash upon impact, and interact with various surfaces. Our project implements 
-                realistic particle dynamics, splash generation, and fluid behaviors in both 2D and 3D environments.
+                Rain It In is a real-time simulation of raindrops falling and splashing upon impact using OpenGL.
+                The system models both particle-level fluid behavior and physical interactions with surfaces.
+                By combining custom teardrop mesh generation, reflection/refraction shaders, and gravity-based dynamics,
+                the project visualizes realistic rain behavior in an interactive 3D environment with skybox lighting and
+                camera control.
+            </p>
+
+            <h2>Technical Approach</h2>
+            <p>
+                We started with a basic 2D simulation, evolving it into a full 3D OpenGL-based simulation using GLEW,
+                GLFW, and GLM.
+                Each droplet is rendered as a procedurally generated mesh with cosine-based tapering to mimic a teardrop
+                shape.
+                The main shader employs a Fresnel-based blend of reflection and refraction using a cubemap to simulate
+                realistic lighting on water.
+                Droplets are subject to gravity and spawn splash particles upon impact using randomized velocity vectors
+                and size sampled from
+                log-normal distributions, inspired by techniques described in <i>Splash! A Particle-Based Fluid
+                    Simulation</i> 
+            </p>
+            <p>
+                Our simulation applied fundamental physics and optical formulas. Droplets fall under Newtonian gravity,
+                updating their position \( \vec{p} \) and velocity \( \vec{v} \) using:
+            </p>
+            <p>
+                \( \vec{v}(t+\Delta t) = \vec{v}(t) + \vec{g} \cdot \Delta t \),<br>
+                \( \vec{p}(t+\Delta t) = \vec{p}(t) + \vec{v}(t+\Delta t) \cdot \Delta t \)
             </p>
             
             <p>
-                We utilize physically-based modeling to accurately simulate water droplet interactions, including:
+                To model optical effects like reflection and refraction, we used built-in GLSL functions based on:
             </p>
+            
             <ul>
-                <li>Particle dynamics under gravity with fixed-timestep integration</li>
-                <li>Complex splash patterns using Gaussian and log-normal distributions</li>
-                <li>Surface sliding with friction and momentum conservation</li>
-                <li>Puddle formation and water accumulation</li>
-                <li>3D visualization using OpenGL with advanced lighting and shaders</li>
+                <li>
+                    <strong>Snell’s Law (for refraction direction):</strong><br>
+                    \( \eta = \frac{n_1}{n_2} \),<br>
+                    \( \vec{T} = \eta \cdot \vec{I} + (\eta \cdot \cos\theta_i - \sqrt{1 - \eta^2 (1 - \cos^2\theta_i)}) \cdot
+                    \vec{N} \)
+                </li>
+                <li>
+                    <strong>Fresnel Reflectance (Schlick's Approximation):</strong><br>
+                    \( R(\theta) = R_0 + (1 - R_0)(1 - \cos\theta)^5 \),<br>
+                    where \( R_0 = \left( \frac{n_1 - n_2}{n_1 + n_2} \right)^2 \)
+                </li>
+                <li>
+                    <strong>Reflection Direction:</strong><br>
+                    \( \vec{R} = \vec{I} - 2 \cdot (\vec{I} \cdot \vec{N}) \cdot \vec{N} \)
+                </li>
+            </ul>
+            
+            <p>
+                Particle splash sizes were sampled from a log-normal distribution:<br>
+                \( r \sim \text{LogNormal}(\mu, \sigma^2) \),<br>
+                where \( \mu = \log(r_{parent} \cdot 0.5) \)
+            </p>
+
+            <p>
+                Camera movement is controlled via keyboard (WASD) and mouse (pitch/yaw), and interactions include
+                pausing ('P') and restarting ('R') the simulation.
+                A ground plane is rendered using standard Phong lighting while droplets and particles use
+                environment-mapped shaders.
+            </p>
+            <p>
+                Our shaders were written in GLSL 330 core. Shader logic was loaded and compiled via utility functions
+                from `ShaderUtils.h/cpp`.
+                We diverged from existing references by crafting our droplet geometry manually, instead of using sphere
+                primitives, and added realistic refraction
+                using the built-in `refract()` function and Schlick approximation for Fresnel reflectance.
+            </p>
+
+            <h2>Problems Encountered</h2>
+            <ul>
+                <li>Initial droplet geometry lacked realism — fixed using cosine series tapering</li>
+                <li>Droplets passed through ground — resolved with collision flags and position clamping</li>
+                <li>Particles didn't despawn — addressed using lifetime decay and erasure logic</li>
+                <li>Camera movement was jerky — smoothed via mouse state tracking (`firstMouse` logic)</li>
+            </ul>
+
+            <h2>Lessons Learned</h2>
+            <ul>
+                <li>Custom mesh generation adds complexity but greatly improves realism</li>
+                <li>Environmental lighting using cubemaps makes a large visual impact</li>
+                <li>Separating physics and rendering logic simplifies debugging and iteration</li>
+                <li>Shader design is critical for visual fidelity, especially with transparent materials</li>
+            </ul>
+
+            <h2>Results</h2>
+            <p>
+                Our system produces visually compelling animations of falling droplets and splash particles under
+                various lighting conditions.
+
+            <div class="section">
+                <h2>Resources</h2>
+                <ul class="resources-list">
+                    <li>Code &amp; hosting: <a href="https://github.com/andywa-ng/cs184-finalproj">GitHub repo</a></li>
+                    <li>Hosted demo &amp; milestone report:
+                        <a href="https://andywa-ng.github.io/cs184-finalproj/milestone.html">
+                            https://andywa-ng.github.io/cs184-finalproj/milestone.html</a>
+                    </li>
+                    <li>Matplotlib docs for animation: <a href="https://matplotlib.org/stable/api/animation_api.html">
+                            https://matplotlib.org/stable/api/animation_api.html</a>
+                    </li>
+                    <li>Research Paper: <a href="https://www.cs.columbia.edu/cg/pdfs/135-splash_egsr07.pdf">
+                            Physically Based Modeling and Animation of Fire</a>
+                    </li>
+                    <li>GPU-Accelerated Simulation: <a
+                            href="https://classes.cs.uchicago.edu/archive/2022/fall/23700-1/papers/gpu-rain.pdf">
+                            GPU-based Rain Simulation</a>
+                    </li>
+                    <li>Reference Project: <a
+                            href="https://cal-cs184-student.github.io/project-webpages-sp23-CardiacMangoes/finalProject/index.html">
+                            Previous Student Project on Water Simulation</a>
+                    </li>
+                </ul>
+            </div>
+
+            <h2>Contributions</h2>
+            <ul>
+                <li><strong>Sophie Nazarian):</strong> Implemented core physics engine, droplet spawning, splash
+                    logic</li>
+                <li><strong>April Zhang:</strong> Implemented 3D simulaiton based off of 2D simulation.</li>
+                </li>
+                <li><strong>Andy Wang:</strong> Webpage</li>
+                <li><strong>Dmytro Krukovskyi: </strong> Implemented fresnel effect to make the dropplets more realistic.</li>
             </ul>
 
             <p class="team-members">
@@ -119,4 +264,5 @@
         </div>
     </div>
 </body>
+
 </html>
