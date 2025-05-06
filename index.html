@@ -120,7 +120,7 @@
             <iframe src="https://drive.google.com/file/d/1TjiRF7AkPSa_GbiYe4xuR5p2vqKGOly6/preview" width="640" height="360"
                 allow="autoplay" allowfullscreen>
             </iframe>
-            
+
             <h2>Abstract</h2>
             <p>
                 Rain It In is a real-time simulation of raindrops falling and splashing upon impact using OpenGL.
@@ -200,6 +200,8 @@
                 <li>Droplets passed through ground — resolved with collision flags and position clamping</li>
                 <li>Particles didn't despawn — addressed using lifetime decay and erasure logic</li>
                 <li>Camera movement was jerky — smoothed via mouse state tracking (`firstMouse` logic)</li>
+                <li>Sphere mesh lacking fluidity, not compatable for desired pooling effects - implemented life/decay logic to unclog surface</li>
+                <li> Reccurssive effect not practicle even for largest initial partale spawn - kept in code just in case but doesnt actually occur</li>
             </ul>
 
             <h2>Lessons Learned</h2>
@@ -246,7 +248,7 @@
                     logic</li>
                 <li><strong>April Zhang:</strong> Implemented 3D simulaiton based off of 2D simulation.</li>
                 </li>
-                <li><strong>Andy Wang:</strong> Webpage</li>
+                <li><strong>Andy Wang:</strong> GUI, shading, rending, camera movement</li>
                 <li><strong>Dmytro Krukovskyi: </strong> Implemented fresnel effect to make the dropplets more realistic.</li>
             </ul>
 
